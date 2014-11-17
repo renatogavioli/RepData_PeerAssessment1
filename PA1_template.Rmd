@@ -7,12 +7,32 @@ output:
 
 
 ## Loading and preprocessing the data
+The data is loaded from the file contained in the .zip file, using the *unzip* then the *read.csv* functions. 
 
+Then the data is processed as total steps per day, as well as mean and median of steps per day, using the *aggregate* function.
 
+```{r}
+unzip("activity.zip")
+data <- read.csv("activity.csv")
+
+perDay <- aggregate(data[[1]], by=data[2], sum)
+##perDay <- cbind(perDay, mean=aggregate(data[[1]], by=data[2], mean)[[2]], median=aggregate(data[[1]], by=data[2], median)[[2]])
+name()
+```
 
 ## What is mean total number of steps taken per day?
 
+An histogram is shown for the total number of steps taken per day.
 
+```{r}
+hist(perDay[[2]], xlab= "Total number of steps per day")
+```
+
+The mean and median total number of steps per day may be shown using the *summary* function
+
+```{r}
+summary(perDay[[2]])
+```
 
 ## What is the average daily activity pattern?
 
