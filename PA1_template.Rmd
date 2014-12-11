@@ -9,37 +9,84 @@ output:
 ## Loading and preprocessing the data
 The data is loaded from the file contained in the .zip file, using the *unzip* then the *read.csv* functions. 
 
-Then the data is processed as total steps per day, as well as mean and median of steps per day, using the *aggregate* function.
-
 ```{r}
 unzip("activity.zip")
 data <- read.csv("activity.csv")
-
-perDay <- aggregate(data[[1]], by=data[2], sum)
-##perDay <- cbind(perDay, mean=aggregate(data[[1]], by=data[2], mean)[[2]], median=aggregate(data[[1]], by=data[2], median)[[2]])
-name()
 ```
 
 ## What is mean total number of steps taken per day?
 
-An histogram is shown for the total number of steps taken per day.
+The total number of steps per day is determined using the *aggregate* function, and an histogram is shown for the total number of steps taken per day.
 
 ```{r}
-hist(perDay[[2]], xlab= "Total number of steps per day")
+stepsPerDay <- aggregate(data$steps, by=data[2], sum)
+names(stepsPerDay)[2]<- "sumSteps"
+hist(stepsPerDay$sumSteps, xlab= "Total number of steps per day", breaks=8)
 ```
 
-The mean and median total number of steps per day may be shown using the *summary* function
+The mean and median total number of steps per day is determined using the *summary* function.
 
 ```{r}
-summary(perDay[[2]])
+summary(stepsPerDay$sumSteps)
 ```
 
 ## What is the average daily activity pattern?
 
+The daily activity pattern is determined by the mean number of steps per time interval.
 
+```{r}
+stepsPerInterval <- aggregate(data$steps, by=data[3], sum, na.rm=TRUE)
+stepsPerInterval[[2]]<- stepsPerInterval[[2]]/length(stepsPerDay$date)
+names(stepsPerInterval)[2]<- "meanSteps"
+plot(stepsPerInterval$interval, stepsPerInterval$meanSteps, type="l", xlab="5-minute interval", ylab="Mean number of steps")
+```
 
 ## Imputing missing values
 
+There are some NA values in the original dataset, whose quantity can be determined:
 
+```{r}
+table(complete.cases(data))
+```
+
+The mean number of steps per interval will be used to fill in the missing values.
+
+```{r}
+missingValues<- merge(data[which(!complete.cases(data)),], stepsPerInterval)
+missingValues<- data.frame("steps"=missingValues$meanSteps, "date"=missingValues$date, "interval"=missingValues$interval)
+dataFixed<- rbind(data[complete.cases(data),], missingValues)
+dataFixed<- dataFixed[order(dataFixed$date, dataFixed$interval),]
+```
+
+The additional data causes some changes to the analytic data, shown in the histogram and the summary below.
+
+```{r}
+stepsPerDayFixed <- aggregate(dataFixed$steps, by=dataFixed[2], sum)
+names(stepsPerDayFixed)[2]<- "sumSteps"
+hist(stepsPerDayFixed$sumSteps, xlab= "Total number of steps per day", breaks=8)
+summary(stepsPerDayFixed$sumSteps)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+First, the dataset is processed - a factor variable is created discerning "weekends" and "weekdays".
+
+```{r}
+dataFixed$date<- as.Date(dataFixed$date)
+dataFixed$weekday<- strftime(dataFixed$date, format="%u")
+dataFixed$isWeekday<- dataFixed$weekday %in% c(6,7)
+dataFixed$isWeekday<- factor(dataFixed$isWeekday, levels=c(TRUE, FALSE), labels=c("weekend", "weekday"))
+```
+
+Then, the activity pattern (mean number of steps as function of the time interval) is plotted according to the following code.
+
+```{r}
+stepsPerIntervalWeekday <- aggregate(dataFixed$steps, by=c(dataFixed[3], dataFixed[5]), sum)
+stepsPerIntervalWeekday[[3]]<- stepsPerIntervalWeekday[[3]]/length(stepsPerDay$date)
+names(stepsPerIntervalWeekday)[3]<- "meanSteps"
+par("mfcol"=c(2,1))
+plot(stepsPerIntervalWeekday[stepsPerIntervalWeekday$isWeekday %in% "weekend", 1], stepsPerIntervalWeekday[stepsPerIntervalWeekday$isWeekday %in% "weekend",3], type="l", xlab="5-minute interval", ylab="Mean number of steps", main="Mean step pattern - Weekends")
+plot(stepsPerIntervalWeekday[stepsPerIntervalWeekday$isWeekday %in% "weekday", 1], stepsPerIntervalWeekday[stepsPerIntervalWeekday$isWeekday %in% "weekday",3], type="l", xlab="5-minute interval", ylab="Mean number of steps", main="Mean step pattern - Weekdays")
+```
+
+Results show that usually during weekdays, the number of steps tend to be higher, while during weekends the rest periods are probably also longer, thus reflecting a smaller number of steps.
